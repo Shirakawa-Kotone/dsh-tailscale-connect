@@ -148,7 +148,7 @@ dsh tailscale: fixed link http://dsh-host.tailnet-example.ts.net:3080/t/<code>
 - 运行时插件只 `ctx.provide('tailscaleAccess', …)` 提供事实（`bindHost`、`trustedHosts`、URL、状态），不注入 `webServer`，避免依赖环。
 - 异步部分放在 `ctx.inject(['webServer', 'connection'], …)` 里，等 `webServer.port` 真正绑定后再开监听；`ctx.effect` 负责退出清理。
 - 反代保留客户端原始 `Host`（`tailscale serve` 也是这个行为），只追加 `X-Forwarded-For` / `X-Forwarded-Proto` / `X-Forwarded-Host`；WebSocket 的 `Sec-WebSocket-*` 原样透传。
-- 纯函数（发现、URL 规划、Serve 分类、配对发布）与网络部分分离，`node --test` 覆盖 69 个用例。
+- 纯函数（发现、URL 规划、Serve 分类、配对发布）与网络部分分离，`npm test` 覆盖 69 个用例。
 
 ## 版本
 
