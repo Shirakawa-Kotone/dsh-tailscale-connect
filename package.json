@@ -18,7 +18,8 @@
     "docs"
   ],
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "prepublishOnly": "node --test test/"
   },
   "engines": {
     "dsh": ">=0.2.2-rc.1",

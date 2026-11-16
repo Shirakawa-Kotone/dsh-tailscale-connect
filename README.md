@@ -30,15 +30,14 @@
 插件是一个标准 DSH bundle（`dsh.bundle.patch`），安装后需要重启 `dsh web`：
 
 ```sh
-# 从 npm（发布后）
-dsh plugin --profile web add dsh-tailscale-connect
-
-# 或者直接从 GitHub
+# 直接从 GitHub
 dsh plugin --profile web add github:Shirakawa-Kotone/dsh-tailscale-connect
 
-# 本地开发
+# 或从本地 checkout
 dsh plugin --profile web add link:~/dev/DSH-Plugins/DSH-tailscale
 ```
+
+npm 包名为 `dsh-tailscale-connect`；仓库内的 `.github/workflows/publish.yml` 会在 GitHub Release 发布时用 `NPM_TOKEN` secret 自动发布，维护者添加一次 secret 即可。
 
 首次启动后看日志里有没有：
 
