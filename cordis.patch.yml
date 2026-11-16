@@ -1,0 +1,49 @@
+# dsh-tailscale-connect — expose DSH to a Tailscale tailnet.
+#
+# This bundle only inserts its runtime plugin row. It deliberately does not
+# override the core `webserver` row: both supported modes keep the DSH web
+# server on loopback (its default), and `dsh-host-webserver` 0.2.x rejects the
+# 0.0.0.0 bind the old `direct` mode used. Keeping the core row untouched means
+# this bundle can be disabled without leaving the web tree waiting on the
+# `tailscaleAccess` service.
+- insert:
+    - id: tailscale-access
+      name: 'dsh-tailscale-connect'
+      config:
+        # proxy | serve  (`direct` is accepted as a deprecated alias of proxy)
+        mode: proxy
+        # proxy mode: tailnet-side port; 0 reuses the DSH web server port.
+        port: 0
+        # proxy mode: explicit Tailscale IP literal; '' auto-detects.
+        bindAddress: ''
+        # MagicDNS hostname override; '' auto-detects from `tailscale status`.
+        hostName: ''
+        # MagicDNS suffix used only when the CLI cannot report a name.
+        tailnet: ''
+        # Extra authorities the /api Host fence should accept (bare host[:port]).
+        extraTrustedHosts: []
+        # serve mode: tailnet-side port, path prefix, and TLS termination.
+        servePort: 80
+        servePath: ''
+        serveSecure: false
+        # serve mode: replace a route that belongs to another service.
+        overwriteServe: false
+        # Publish the tailnet origin for @linxin666/dsh-remote-bridge pairing.
+        publishPairOrigin: true
+        # Print the operator-facing URLs at startup.
+        printUrl: true
+        # Self-check the configured URL once after the listener starts.
+        verify: true
+        # Re-discover the tailnet address every 60 s while the proxy is active.
+        watch: true
+        # Explicit `tailscale` executable; '' probes platform defaults.
+        binaryPath: ''
+        # Stable short link `/t/<code>` for tailnet bookmarks. The code is
+        # generated once and persisted in $DSH_HOME/tailscale-access.json.
+        shortlink: true
+        shortlinkPath: '/t'
+        # '' generates/persists a code; a literal 6–64 char code overrides it.
+        accessCode: ''
+        accessCodeFile: ''
+        accessCodeLength: 10
+        rotateAccessCode: false

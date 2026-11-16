@@ -1,0 +1,57 @@
+{
+  "name": "dsh-tailscale-connect",
+  "version": "0.3.0",
+  "description": "Expose the DeepSeek Harness Web GUI and its phone remote-control pairing to a Tailscale tailnet: a tailnet-only HTTP/WebSocket proxy, a verified tailscale-serve mode, the /api trust fence, and the DSH_REMOTE_PUBLIC_BASE_URL pairing origin.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "icon.svg",
+    "docs"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1",
+    "node": ">=24.9.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "icon": "./icon.svg",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "tailscale",
+    "tailnet",
+    "cordis",
+    "remote-access",
+    "remote-control",
+    "websocket"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shirakawa-Kotone/dsh-tailscale-connect.git"
+  },
+  "homepage": "https://github.com/Shirakawa-Kotone/dsh-tailscale-connect#readme",
+  "bugs": {
+    "url": "https://github.com/Shirakawa-Kotone/dsh-tailscale-connect/issues"
+  },
+  "author": "Shirakawa-Kotone",
+  "publishConfig": {
+    "access": "public"
+  }
+}
