@@ -47,3 +47,8 @@
         accessCodeFile: ''
         accessCodeLength: 10
         rotateAccessCode: false
+        # Loopback-only onboarding page at the bare prefix (QR codes for the
+        # fixed link and, when present, the remote-bridge pairing token).
+        shortlinkLanding: true
+        # 0 keeps DSH's 30-day browser cookie; phone-heavy installs may use 180.
+        cookieMaxAgeDays: 0

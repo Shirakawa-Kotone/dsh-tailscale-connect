@@ -32,16 +32,22 @@ Serve configuration is read and classified before it is written: a route that al
 
 The pairing-token route stays loopback-only: a tailnet client can dial `/ios/v1` with an already-issued ticket, but cannot mint one.
 
-## Fixed short link
+## Fixed short link and phone onboarding
 
-The DSH launch token changes with every process, so the tokenized startup URL cannot be bookmarked. The plugin accepts a stable code at `/t/<code>` and redirects to `connection.authenticatedUrl(<public base>)`; DSH then mints its normal cookie and redirects to the clean URL.
+The DSH launch token changes with every process, so the tokenized startup URL cannot be bookmarked. The plugin accepts a stable code at `/t/<code>`.
+
+The handler mints DSH's browser cookie itself: it feeds the current launch token to `connection.authorizeIndex()` on a synthetic request, captures the `Set-Cookie` header, and answers `303` to the clean application URL. No token enters the address bar or a redirect that a browser might cache across a restart. The older token-redirect path remains only as a fallback for hosts where `authorizeIndex` is unavailable.
+
+`GET /t` is a loopback-only onboarding page. It renders a QR for the fixed link and, by asking the local remote-bridge endpoint for a fresh token, a pairing QR for the phone app. Requests that arrive through the tailnet proxy or `tailscale serve` carry a non-loopback `X-Forwarded-For` and receive 404, so the bearer code never leaves the machine.
 
 The code is generated once and persisted in `$DSH_HOME/tailscale-access.json` with mode `0600`. It is a bearer credential with the same power as the process token, so:
 
 - the status endpoint never returns it;
-- wrong codes get a 404 and per-client 429s after repeated failures;
-- redirect origins come from an allowlist; a forged `Host` falls back to the advertised origin instead of leaking the token elsewhere.
+- wrong codes get a short 404 page and per-client 429s after repeated failures;
+- redirect origins come from an allowlist; a forged `Host` falls back to the advertised origin instead of leaking a fresh cookie elsewhere.
+
+`cookieMaxAgeDays` optionally extends DSH's browser-session lifetime (default 30 days) so a phone that logs in once does not need the link again after a month.
 
 ## Testing
 
-`node --test test/` covers discovery, URL planning, Serve classification and teardown, HTTP/WebSocket forwarding, pairing publication, access-code persistence/rotation, and short-link redirect/error behaviour. Network tests use loopback servers and temporary directories; nothing depends on a real tailnet.
+`npm test` covers discovery, URL planning, Serve classification and teardown, HTTP/WebSocket forwarding, pairing publication, access-code persistence/rotation, and short-link redirect/error behaviour. Network tests use loopback servers and temporary directories; nothing depends on a real tailnet.

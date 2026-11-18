@@ -78,6 +78,8 @@ dsh tailscale: pairing origin published: DSH_REMOTE_PUBLIC_BASE_URL=http://dsh-h
     accessCodeFile: ''         # 默认 $DSH_HOME/tailscale-access.json（0600）
     accessCodeLength: 10
     rotateAccessCode: false    # true = 每次启动换一个 code
+    shortlinkLanding: true     # 本机 /t 手机引导页（含二维码）
+    cookieMaxAgeDays: 0        # 0 = 用 DSH 默认 30 天；手机可设 180
 ```
 
 ## 手机远程控制（配对）
@@ -102,7 +104,7 @@ dsh tailscale: pairing origin published: DSH_REMOTE_PUBLIC_BASE_URL=http://dsh-h
 
 得到 `wss://<MagicDNS>:8443/ios/v1`。`serveSecure` 要求 tailnet 已在 Tailscale 管理台启用 HTTPS 证书。
 
-## 固定短链（给 tailnet 设备收藏）
+## 固定短链与手机引导页
 
 DSH 的启动链接带一次性进程 token，每次重启都会变，不适合收藏。插件提供一个**固定短链**：
 
@@ -113,22 +115,39 @@ http://dsh-host.tailnet-example.ts.net:3080/t/<code>
 打开后：
 
 1. 插件校验短码；
-2. 302 到**当前进程**的带 token 的 DSH 地址；
-3. DSH 正常种下 30 天 Cookie 并跳回干净地址。
+2. 直接通过 DSH 的 `connection` 服务种下会话 Cookie，并 **303** 到干净地址；
+3. 页面正常加载。
 
-所以短链本身永远不变，token 每次重启自动更新。短码首次启动时生成，写入
-`$DSH_HOME/tailscale-access.json`（权限 `0600`），之后每次启动复用；日志里会打印：
+不再经过「带 token 的中间 URL」，所以不会因为浏览器缓存了旧重定向、或 DSH 重启换了 token 而出现第二次打开空白页。Cookie 默认 30 天；想更久可以设 `cookieMaxAgeDays: 180`。
+
+短码首次启动时生成，写入 `$DSH_HOME/tailscale-access.json`（权限 `0600`），之后每次启动复用；日志里会打印：
 
 ```
 dsh tailscale: fixed link http://dsh-host.tailnet-example.ts.net:3080/t/<code>
 ```
+
+### 本机 /t 引导页（手机扫码）
+
+在 **DSH Host 本机**打开：
+
+```
+http://127.0.0.1:3080/t
+```
+
+会看到一个只在本机回环可见的手机引导页：
+
+- **固定短链二维码**：手机相机/浏览器扫码直接登录；
+- **DSH App 配对二维码**：如果装了 `@linxin666/dsh-remote-bridge`，页面会向回环的配对端点取一次性配对码并渲染二维码，手机 App 扫码即可，不用去侧边栏找配对面板；
+- 复制链接按钮，以及 `cookieMaxAgeDays` 的效果说明。
+
+这个页面**只接受本机回环请求**：经代理或 `tailscale serve` 来的 tailnet 请求一律 404，避免把 bearer 短码暴露给局域网/tailnet。
 
 规则与安全：
 
 - 短链 = 浏览器登录凭据，**拿到即等于拿到这台机器的 owner 权限**。只发给自己的设备，不要贴到公开地方。
 - 重定向目标只允许本次发布的 tailnet 地址 / 回环地址；伪造 `Host` 不会把进程 token 重定向到外部域名。
 - 短码用常量时间比较；错误码返回 404，同一来源每分钟错误超过 30 次返回 429。
-- 状态端点 `/dsh-tailscale/status` 只显示 `shortlink.enabled/path/file`，不返回短码。
+- 状态端点 `/dsh-tailscale/status` 只显示 `shortlink.enabled/path/file/landing`，不返回短码。
 - 轮换：删掉 `$DSH_HOME/tailscale-access.json` 后重启；或配置一个固定的 `accessCode`；或临时设 `rotateAccessCode: true` 启动一次再改回。
 - 想关闭：`shortlink: false`。已有 Cookie 的设备不受影响。
 
@@ -148,10 +167,11 @@ dsh tailscale: fixed link http://dsh-host.tailnet-example.ts.net:3080/t/<code>
 - 运行时插件只 `ctx.provide('tailscaleAccess', …)` 提供事实（`bindHost`、`trustedHosts`、URL、状态），不注入 `webServer`，避免依赖环。
 - 异步部分放在 `ctx.inject(['webServer', 'connection'], …)` 里，等 `webServer.port` 真正绑定后再开监听；`ctx.effect` 负责退出清理。
 - 反代保留客户端原始 `Host`（`tailscale serve` 也是这个行为），只追加 `X-Forwarded-For` / `X-Forwarded-Proto` / `X-Forwarded-Host`；WebSocket 的 `Sec-WebSocket-*` 原样透传。
-- 纯函数（发现、URL 规划、Serve 分类、配对发布）与网络部分分离，`npm test` 覆盖 69 个用例。
+- 纯函数（发现、URL 规划、Serve 分类、配对发布）与网络部分分离，`npm test` 覆盖 77 个用例。
 
 ## 版本
 
+- **0.4.0** — 修复固定短链二次打开空白：改为直接 mint DSH 会话 Cookie + 303，不再把进程 token 放进重定向；新增本机 `/t` 手机引导页（固定短链二维码 + remote-bridge 配对二维码，仅回环可见）；新增 `cookieMaxAgeDays` / `shortlinkLanding` 配置；依赖 `qrcode-generator`。
 - **0.3.0** — 发布名改为 `dsh-tailscale-connect`（`dsh-tailscale-access` 在 npm 上已被占用）；新增固定短链 `mode 无关`：`/t/<code>` 302 到当前进程 token 链接，短码持久化在 `$DSH_HOME/tailscale-access.json`（0600）；支持显式 `accessCode`、自定义路径/长度、轮换与错误限速；重定向只走本次发布地址，防 Host 伪造 token 外泄。
 - **0.2.0** — 新 `proxy` 模式（tailnet-only 反代，默认）；修正 `/api` 围栏（之前补丁打在 `web-runtime` 上，`trustedHosts` 实际未生效）；`connection.trustedHosts` 运行时注入；`serve` 模式改为先读状态、拒绝覆盖冲突路由、退出时单端口撤销；新增自检、状态端点、`serveSecure` / `overwriteServe` / `watch` 配置；测试补齐。
 - **0.1.2** — 基线：`direct` / `serve` 两模式、MagicDNS 发现、`DSH_REMOTE_PUBLIC_BASE_URL` 发布。`direct` 在 DSH 0.2.x 已不可用（webserver 拒绝通配地址），0.2.0 起作为 `proxy` 的别名并告警。
