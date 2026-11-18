@@ -1,8 +1,16 @@
 name: publish
 
+# Publishes with npm Trusted Publishing (OIDC). No npm token or 2FA secret is
+# involved: the registry trusts this exact repository + workflow after a
+# one-time configuration on npmjs.com:
+#   Provider: GitHub Actions
+#   Organization: Shirakawa-Kotone
+#   Repository: dsh-tailscale-connect
+#   Workflow filename: publish.yml
+#   Environment: (empty)
 on:
-  release:
-    types: [published]
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -14,14 +22,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      # Trusted publishing needs a recent npm CLI (OIDC is built in).
+      - run: npm install --global npm@latest
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: node --test test/*.test.js
-      - run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public
